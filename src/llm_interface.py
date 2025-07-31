@@ -245,12 +245,12 @@ You are a concise HR assistant for {self.config.COMPANY_NAME}. Provide brief, ac
 {query}
 
 ### Task
-- Answer in 1-2 sentences.
+- Answer in 2-3 sentences.
 - Use bullet points or plain text for clarity.
 - If unsure, say: "Please contact HR at hr@{self.config.COMPANY_NAME.lower()}.com."
 
 ### Constraints
-- Keep response under 100 words.
+- Keep response under 200 words.
 - Avoid speculation.
 - Use professional tone.
 """
@@ -265,31 +265,42 @@ You are a concise HR assistant for {self.config.COMPANY_NAME}. Provide brief, ac
         # Add example for offer letters
         example = ""
         if query_type == ResponseType.OFFER_LETTER:
-            example = f"""### Example Offer Letter
+            example = f"""### Official Offer Letter
 [{self.config.COMPANY_NAME}]
 
 Date: {{date}}
 
 Dear {{employee_name}},
 
-We are pleased to offer you the position of {{position}} in the {{department}} at {self.config.COMPANY_NAME}. Below are the details:
+We are excited to extend to you an offer for the position of **{{position}}** in our **{{department}}** team at **{self.config.COMPANY_NAME}**. We were impressed with your qualifications and believe you will be a valuable addition to our organization.
+
+Please find the key details of the offer below:
 
 - **Start Date**: {{joining_date}}
-- **Compensation**: ₹{{total_ctc:,.0f}} annually, including:
-  - Base Salary: ₹{{base_salary:,.0f}}
-  - Performance Bonus: ₹{{performance_bonus:,.0f}}
-  - Retention Bonus: ₹{{retention_bonus:,.0f}}
-- **Benefits**: 
-  - Comprehensive health insurance
-  - Provident Fund
-  - {{band}}-specific leave policies
-- **Work Location**: {{location}}
-- **Terms**: Employment is at-will, subject to {self.config.COMPANY_NAME} policies
-- **Next Steps**: Sign and return by {{deadline}}. Contact HR at hr@{self.config.COMPANY_NAME.lower()}.com.
+- **Annual Compensation**: ₹{{total_ctc:,.0f}}, which includes:
+  - **Base Salary**: ₹{{base_salary:,.0f}}
+  - **Performance Bonus**: ₹{{performance_bonus:,.0f}}
+  - **Retention Bonus**: ₹{{retention_bonus:,.0f}}
 
-Sincerely,
-[HR Name]
-{self.config.COMPANY_NAME}"""
+- **Benefits**:
+  - Comprehensive health insurance coverage
+  - Provident Fund contributions
+  - Leave policies aligned with the {{band}} band
+
+- **Work Location**: {{location}}
+
+- **Employment Terms**: Your employment will be on an *at-will* basis, governed by the policies and procedures of {self.config.COMPANY_NAME}.
+
+- **Next Steps**: Please sign and return this letter by **{{deadline}}** to confirm your acceptance. Should you have any questions, feel free to contact our HR team at **hr@{self.config.COMPANY_NAME.lower()}.com**.
+
+We look forward to welcoming you to the team and working together toward shared success.
+
+Warm regards,  
+[HR Name]  
+Human Resources  
+{self.config.COMPANY_NAME}
+"""
+
 
         return f"""### System Instructions
 {system_prompt}

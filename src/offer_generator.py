@@ -11,6 +11,7 @@ import logging
 
 from src.llm_interface import LLMInterface
 from src.vector_store import VectorStore
+from config.settings import Config
 from templates.offer_template import OfferTemplate
 
 logging.basicConfig(level=logging.INFO)
@@ -79,6 +80,7 @@ class PolicyContext:
 class OfferGenerator:
     def __init__(self, vector_store: VectorStore):
         self.vector_store = vector_store
+        self.config = Config()  # Initialize the Config object
         self.llm = LLMInterface()
         self.template = OfferTemplate()
         
@@ -359,53 +361,55 @@ class OfferGenerator:
         return all_chunks
 
     def _create_enhanced_offer_query(self, profile: EmployeeProfile) -> str:
-        """Create optimized query for offer letter generation"""
+        """Create a detailed and professional prompt for offer letter generation"""
+
         joining_date = profile.joining_date or (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
         position_title = self._determine_position_title(profile)
-        
+
         query = f"""
-Generate a comprehensive, professional offer letter for {profile.name} using the following specifications:
+    Generate a formal and detailed offer letter for the candidate **{profile.name}**, using the following structured information:
 
-EMPLOYEE INFORMATION:
-• Name: {profile.name}
-• Position: {position_title}
-• Band Level: {profile.band}
-• Department: {profile.department}
-• Location: {profile.location}
-• Joining Date: {joining_date}
-• Reporting Manager: {profile.manager}
-• Offer Type: {profile.offer_type.value.replace('_', ' ').title()}
+    ### EMPLOYEE DETAILS
+    - **Name**: {profile.name}
+    - **Position Title**: {position_title}
+    - **Band Level**: {profile.band}
+    - **Department**: {profile.department}
+    - **Work Location**: {profile.location}
+    - **Joining Date**: {joining_date}
+    - **Reporting Manager**: {profile.manager}
+    - **Offer Type**: {profile.offer_type.value.replace('_', ' ').title()}
 
-COMPENSATION BREAKDOWN:
-• Base Salary: ₹{profile.base_salary:,.0f} per annum
-• Performance Bonus: ₹{profile.performance_bonus:,.0f} per annum
-• Retention Bonus: ₹{profile.retention_bonus:,.0f} per annum
-• Total CTC: ₹{profile.total_ctc:,.0f} per annum
+    ### COMPENSATION STRUCTURE
+    - **Base Salary**: ₹{profile.base_salary:,.0f} per annum
+    - **Performance Bonus**: ₹{profile.performance_bonus:,.0f} per annum
+    - **Retention Bonus**: ₹{profile.retention_bonus:,.0f} per annum
+    - **Total CTC**: ₹{profile.total_ctc:,.0f} per annum
 
-OFFER LETTER REQUIREMENTS:
-1. Professional business format with company letterhead
-2. Warm, welcoming opening paragraph
-3. Clear position and compensation details
-4. Comprehensive policy integration:
-   - Leave policies specific to {profile.band} level
-   - Work arrangements for {profile.department}
-   - Location-specific policies for {profile.location}
-   - Benefits and perks details
-   - Performance evaluation framework
-5. Legal terms and conditions
-6. Clear next steps and contact information
-7. Professional closing with signature block
+    ### OFFER LETTER GUIDELINES
+    Generate a comprehensive and professionally written offer letter that adheres to the following requirements:
 
-FORMATTING STANDARDS:
-• Use proper business letter structure
-• Include clear section headings
-• Bullet points for benefits and policies
-• Professional tone throughout
-• Proper spacing and readability
+    1. Start with a **welcoming and positive introduction**.
+    2. Present a **clear summary of the role and compensation**.
+    3. Include **policy highlights**, such as:
+    - Leave policies relevant to **{profile.band}**
+    - Department-specific guidelines for **{profile.department}**
+    - Location-specific provisions for **{profile.location}**
+    - Standard employee benefits and perks
+    - Performance review and evaluation framework
+    4. Include all necessary **legal terms and conditions** (e.g., at-will employment, confidentiality, notice period).
+    5. Conclude with **next steps** and clear **HR contact details**.
+    6. End with a **professional sign-off** and space for digital or physical signature.
 
-Generate a complete, ready-to-send offer letter that reflects CompanyABC's professionalism and includes all relevant policy details from the provided context.
-"""
+    ### FORMATTING INSTRUCTIONS
+    - Use official **business letter formatting** with proper headings
+    - Maintain a **professional, respectful tone**
+    - Use **bullet points** for benefits and policy items
+    - Ensure **logical structure, spacing, and readability**
+
+    The final output should be a polished, ready-to-send offer letter that reflects **{self.config.COMPANY_NAME}**'s brand and professionalism, incorporating the provided employee and compensation details along with relevant policies.
+    """
         return query
+
 
     def _determine_position_title(self, profile: EmployeeProfile) -> str:
         """Determine position title based on department and band"""
@@ -456,36 +460,44 @@ Date: {datetime.now().strftime('%B %d, %Y')}
         return processed.replace('\n\n\n', '\n\n')
 
     def _generate_fallback_offer(self, profile: EmployeeProfile, error: str) -> str:
-        """Generate basic fallback offer letter"""
+        """Generate a minimal but professional fallback offer letter in case of system failure"""
+
         position_title = self._determine_position_title(profile)
+        today = datetime.now().strftime('%B %d, %Y')
+
         return f"""
-[CompanyABC]
-123 Business Park, Bangalore, Karnataka, India
-Date: {datetime.now().strftime('%B %d, %Y')}
+    [CompanyABC]  
+    123 Business Park, Bangalore, Karnataka, India  
+    Date: {today}
 
-Dear {profile.name},
+    Dear {profile.name},
 
-We are pleased to offer you the position of {position_title} in our {profile.department} department.
+    We are delighted to extend a preliminary offer for the position of **{position_title}** in the **{profile.department}** department at **CompanyABC**.
 
-Position Details:
-• Role: {position_title}
-• Band Level: {profile.band}
-• Department: {profile.department}
-• Location: {profile.location}
-• Total CTC: ₹{profile.total_ctc:,.0f} per annum
+    ### Position Summary:
+    - **Role**: {position_title}  
+    - **Band Level**: {profile.band}  
+    - **Department**: {profile.department}  
+    - **Work Location**: {profile.location}  
+    - **Total Annual Compensation (CTC)**: ₹{profile.total_ctc:,.0f}
 
-This offer is subject to standard company policies and terms of employment.
+    This offer is extended in accordance with our standard employment terms and company policies. A detailed offer letter will follow shortly.
 
-Please contact HR at peopleops@companyabc.com for complete details and to proceed with the joining process.
+    In the meantime, if you have any questions or require clarification, please reach out to our HR team at **peopleops@companyabc.com**.
 
-Best regards,
-Anita Desai
-Head of Human Resources
-CompanyABC
+    We appreciate your patience and look forward to having you on board.
 
-Note: This is a basic offer template generated due to system limitations. 
-Error details: {error}
-"""
+    Warm regards,  
+    **Anita Desai**  
+    Head of Human Resources  
+    CompanyABC
+
+    ---
+
+    **Note**: This letter has been generated as a fallback due to a temporary system issue.  
+    *Error reference: {error}*
+    """
+
 
     def _update_generation_stats(self, success: bool, generation_time: float):
         """Update generation statistics"""
