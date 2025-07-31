@@ -32,18 +32,18 @@ graph TD
     end
 
     subgraph Processing Core
-        B(📝 Document Processor) --> C{📚 Vector Store (FAISS)};
-        C --> E(🤖 LLM Interface - Gemini);
+        B(📝 Document Processor) --> C{📚 Vector Store (FAISS)}
+        C --> E(🤖 LLM Interface - Gemini)
     end
 
     subgraph Output Layer
-        D[✨ Embeddings & Metadata];
-        F[📧 Generated Offer Letters];
+        D[✨ Embeddings & Metadata]
+        F[📧 Generated Offer Letters]
     end
 
-    A --> B;
-    C --> D;
-    E --> F;
+    A --> B
+    C --> D
+    E --> F
 
     style A fill:#D6EAF8,stroke:#3498DB
     style B fill:#D1F2EB,stroke:#1ABC9C
