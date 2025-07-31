@@ -25,16 +25,33 @@ The system follows a RAG pipeline:
 
 ## 🏗️ Architecture
 
-|─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Document      │    │   Vector Store  │    │   LLM Interface │
-│   Processor     │───▶│   (FAISS)      │───▶│   (Gemini)      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-|                        |                           |
-▼                        ▼                           ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   HR Policies   │    │   Embeddings    │    │   Generated     │
-│   & Templates   │    │   & Metadata    │    │   Offer Letters │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+```mermaid
+graph TD
+    subgraph Input Layer
+        A[📄 HR Policies & Templates]
+    end
+
+    subgraph Processing Core
+        B(📝 Document Processor) --> C{📚 Vector Store (FAISS)};
+        C --> E(🤖 LLM Interface - Gemini);
+    end
+
+    subgraph Output Layer
+        D[✨ Embeddings & Metadata];
+        F[📧 Generated Offer Letters];
+    end
+
+    A --> B;
+    C --> D;
+    E --> F;
+
+    style A fill:#D6EAF8,stroke:#3498DB
+    style B fill:#D1F2EB,stroke:#1ABC9C
+    style C fill:#FDEDEC,stroke:#E74C3C
+    style E fill:#FDEBD0,stroke:#F39C12
+    style D fill:#E8DAEF,stroke:#8E44AD
+    style F fill:#D5F5E3,stroke:#2ECC71
+```
 
 ## 🛠️ Technology Stack
 
