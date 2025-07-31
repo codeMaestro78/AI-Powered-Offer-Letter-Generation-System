@@ -28,35 +28,81 @@ The system follows a RAG pipeline:
 <details> <summary>Click to expand diagram</summary>
 
 ```mermaid
-graph TD
-    subgraph Input_Layer
-        A[HR Policies & Templates]
+graph TB
+    subgraph "Input Sources"
+        A1[📄 HR Policy Documents]
+        A2[📋 Employee Data CSV]
+        A3[📝 Offer Letter Templates]
     end
 
-    subgraph Processing_Core
-        B[Document Processor]
-        C[Vector Store (FAISS)]
-        E[LLM Interface - Gemini]
+    subgraph "Processing Layer"
+        B1[📝 Document Processor]
+        B2[🔍 Text Chunking Engine]
+        B3[🧮 Embedding Generator]
     end
 
-    subgraph Output_Layer
-        D[Embeddings & Metadata]
-        F[Generated Offer Letters]
+    subgraph "Storage & Retrieval"
+        C1[📚 FAISS Vector Store]
+        C2[🗃️ Document Metadata]
+        C3[🔎 Similarity Search Engine]
     end
 
-    A --> B
-    B --> C
-    C --> E
-    C --> D
-    E --> F
+    subgraph "AI Generation"
+        D1[🤖 Gemini 1.5 Pro LLM]
+        D2[📋 Context Assembler]
+        D3[✨ Offer Letter Generator]
+    end
 
-    style A fill:#D6EAF8,stroke:#3498DB
-    style B fill:#D1F2EB,stroke:#1ABC9C
-    style C fill:#FDEDEC,stroke:#E74C3C
-    style E fill:#FDEBD0,stroke:#F39C12
-    style D fill:#E8DAEF,stroke:#8E44AD
-    style F fill:#D5F5E3,stroke:#2ECC71
+    subgraph "User Interface"
+        E1[🖥️ Streamlit Web App]
+        E2[💬 HR Policy Chatbot]
+        E3[📊 System Dashboard]
+    end
 
+    subgraph "Output"
+        F1[📧 Personalized Offer Letters]
+        F2[💬 Policy Q&A Responses]
+        F3[📈 System Analytics]
+    end
+
+    A1 --> B1
+    A2 --> B1
+    A3 --> B1
+    
+    B1 --> B2
+    B2 --> B3
+    B3 --> C1
+    B1 --> C2
+    
+    C1 --> C3
+    C2 --> C3
+    C3 --> D2
+    
+    D2 --> D1
+    D1 --> D3
+    D3 --> F1
+    
+    E1 --> B1
+    E2 --> C3
+    E2 --> D1
+    E2 --> F2
+    E3 --> F3
+    
+    D1 --> F2
+
+    classDef inputStyle fill:#E3F2FD,stroke:#1976D2,stroke-width:2px
+    classDef processStyle fill:#E8F5E8,stroke:#388E3C,stroke-width:2px
+    classDef storageStyle fill:#FFF3E0,stroke:#F57C00,stroke-width:2px
+    classDef aiStyle fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px
+    classDef uiStyle fill:#FFEBEE,stroke:#C62828,stroke-width:2px
+    classDef outputStyle fill:#E0F2F1,stroke:#00695C,stroke-width:2px
+
+    class A1,A2,A3 inputStyle
+    class B1,B2,B3 processStyle
+    class C1,C2,C3 storageStyle
+    class D1,D2,D3 aiStyle
+    class E1,E2,E3 uiStyle
+    class F1,F2,F3 outputStyle
 ```
 
 </details>
