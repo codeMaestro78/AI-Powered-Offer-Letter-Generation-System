@@ -30,18 +30,18 @@ The system follows a RAG pipeline:
 ```mermaid
 graph TD
     subgraph Input_Layer
-        A[📄 HR Policies & Templates]
+        A[HR Policies & Templates]
     end
 
     subgraph Processing_Core
-        B[📝 Document Processor]
-        C[📚 Vector Store (FAISS)]
-        E[🤖 LLM Interface - Gemini]
+        B[Document Processor]
+        C[Vector Store (FAISS)]
+        E[LLM Interface - Gemini]
     end
 
     subgraph Output_Layer
-        D[✨ Embeddings & Metadata]
-        F[📧 Generated Offer Letters]
+        D[Embeddings & Metadata]
+        F[Generated Offer Letters]
     end
 
     A --> B
@@ -56,6 +56,7 @@ graph TD
     style E fill:#FDEBD0,stroke:#F39C12
     style D fill:#E8DAEF,stroke:#8E44AD
     style F fill:#D5F5E3,stroke:#2ECC71
+
 ```
 
 </details>
