@@ -1,0 +1,72 @@
+🎯 SAMPLE OFFER LETTER - Company ABC
+
+📄 Offer of Employment
+
+Date: [DATE]
+Employee Name: [EMPLOYEE_NAME]
+Position: [POSITION]
+Department: [DEPARTMENT]
+Band Level: [BAND]
+Location: [LOCATION]
+Reporting Manager: [MANAGER_NAME]
+
+Dear [EMPLOYEE_NAME],
+
+We are delighted to extend this offer of employment for the position of [POSITION] with Company ABC. We believe your skills and experience will be a valuable addition to our [DEPARTMENT] team.
+
+💰 Compensation Structure
+
+Your compensation package is as follows:
+• Fixed Annual Salary: ₹[BASE_SALARY]
+• Performance Bonus (Quarterly): ₹[PERFORMANCE_BONUS]
+• Retention Bonus (Annual): ₹[RETENTION_BONUS]
+• Total Cost to Company (CTC): ₹[TOTAL_CTC]
+
+🏖 Leave Policy (Band [BAND])
+
+Based on your band level, you are entitled to:
+• Annual Leave: [ANNUAL_LEAVE] days
+• Sick Leave: [SICK_LEAVE] days  
+• Personal Leave: [PERSONAL_LEAVE] days
+• Maternity/Paternity Leave: As per company policy
+
+🏢 Work From Office (WFO) Policy
+
+Your department follows the [WFO_POLICY] work arrangement:
+• [WFO_DETAILS]
+
+✈ Travel Policy (Band [BAND])
+
+Travel entitlements based on your band:
+• [TRAVEL_POLICY_DETAILS]
+
+📋 Additional Benefits
+
+• Health Insurance: Comprehensive coverage for you and family
+• Professional Development: Annual learning budget
+• Flexible Working Hours: Core hours 10 AM - 4 PM
+• Employee Stock Options: Vesting schedule applies
+
+🔒 Confidentiality and IP
+
+You agree to maintain confidentiality of all proprietary information and assign all work-related intellectual property to Company ABC.
+
+⚖️ Terms and Conditions
+
+• Probation Period: 3 months
+• Notice Period: 60 days (15 days during probation)
+• Background Verification: Required before joining
+
+✅ Next Steps
+
+Please confirm your acceptance by signing and returning this letter within 5 business days. Our HR team will guide you through the onboarding process.
+
+We look forward to welcoming you to the Company ABC family!
+
+Best regards,
+
+[HR_MANAGER_NAME]
+HR Business Partner
+Company ABC
+📧 peopleops@companyabc.com
+🌐 www.companyabc.com

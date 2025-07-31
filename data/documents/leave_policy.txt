@@ -1,0 +1,82 @@
+🏖 LEAVE POLICY - Company ABC
+
+📋 1. Overview
+This policy outlines the leave entitlements and guidelines for all employees of Company ABC.
+
+🏷 2. Band-wise Leave Entitlement Matrix
+
+Band L1 (Junior Level):
+• Annual Leave: 21 days
+• Sick Leave: 12 days
+• Personal Leave: 6 days
+• Bereavement Leave: 5 days
+• Maternity Leave: 180 days
+• Paternity Leave: 15 days
+
+Band L2 (Mid Level):
+• Annual Leave: 24 days
+• Sick Leave: 15 days
+• Personal Leave: 8 days
+• Bereavement Leave: 7 days
+• Maternity Leave: 180 days
+• Paternity Leave: 21 days
+
+Band L3 (Senior Level):
+• Annual Leave: 27 days
+• Sick Leave: 18 days
+• Personal Leave: 10 days
+• Bereavement Leave: 10 days
+• Maternity Leave: 180 days
+• Paternity Leave: 30 days
+
+Band L4 (Leadership Level):
+• Annual Leave: 30 days
+• Sick Leave: 21 days
+• Personal Leave: 12 days
+• Bereavement Leave: 15 days
+• Maternity Leave: 180 days
+• Paternity Leave: 45 days
+
+🧠 3. Leave Application Process
+• All leaves must be applied through the HRMS system
+• Manager approval required for all leave requests
+• Minimum 48-hour notice for planned leaves
+• Medical certificate required for sick leaves exceeding 3 days
+
+🏃‍♂️ 4. Leave Carryover Policy
+• Maximum 5 days of annual leave can be carried forward
+• Unused leaves will be encashed at year-end (max 10 days)
+• Sick and personal leaves cannot be carried forward
+
+🏢 5. Work From Office (WFO) Expectations
+
+Engineering Team:
+• 3 days WFO per week (Tuesday, Wednesday, Thursday)
+• Core collaboration hours: 10 AM - 4 PM
+• Flexible start time: 8 AM - 11 AM
+
+Sales Team:
+• 4 days WFO per week (Monday to Thursday)
+• Client meeting days are mandatory WFO
+• Core hours: 9 AM - 6 PM
+
+HR Team:
+• 4 days WFO per week
+• Interview days are mandatory WFO
+• Flexible arrangement during recruitment drives
+
+Finance Team:
+• 5 days WFO during month-end/quarter-end
+• 3 days WFO during regular periods
+• Core hours: 9:30 AM - 6:30 PM
+
+Operations Team:
+• 5 days WFO (operational requirements)
+• Shift-based for 24/7 operations
+• Weekend rotation applicable
+
+🏡 6. Work From Home Guidelines
+• Home office setup allowance: ₹15,000 annually
+• Stable internet connection mandatory
+• Availability during core hours required
+• Regular check-ins with manager
