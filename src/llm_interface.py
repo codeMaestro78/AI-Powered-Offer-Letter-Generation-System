@@ -320,17 +320,18 @@ Sincerely,
 """
 
     def _get_system_prompt(self, query_type: ResponseType) -> str:
-        base_prompt = f"You are an expert HR assistant for {self.config.COMPANY_NAME}, specializing in policy interpretation and professional offer letter generation."
-        
         if query_type == ResponseType.OFFER_LETTER:
-            return f"""{base_prompt}
-Generate legally compliant offer letters with:
+            return f"""You are an expert HR writing assistant for {self.config.COMPANY_NAME}. Your sole task is to generate a professional, legally compliant offer letter based on the provided context and query. Do not provide guidance or summaries; write the complete letter.
+
+Key requirements for the offer letter:
 - Professional formatting (letterhead, salutation, closing)
 - Personalized details (name, band, department, location, compensation)
 - Comprehensive policy integration (leave, benefits, work arrangements)
 - Clear terms, conditions, and next steps"""
         
-        elif query_type == ResponseType.POLICY_QUERY:
+        base_prompt = f"You are an expert HR assistant for {self.config.COMPANY_NAME}, specializing in policy interpretation and professional offer letter generation."
+        
+        if query_type == ResponseType.POLICY_QUERY:
             return f"""{base_prompt}
 Provide accurate policy interpretations with:
 - Specific policy section references
@@ -358,7 +359,7 @@ Deliver accurate, helpful HR guidance with:
 - Ensure alignment with {self.config.COMPANY_NAME} policies"""
         
         elif query_type == ResponseType.POLICY_QUERY:
-            return f"""Provide policy guidance in markdown format with:
+            return f"""Answer the following policy question in markdown format. Provide a direct and concise answer with:
 - Specific policy section references
 - Band/department/location-specific details
 - Step-by-step implementation guidance

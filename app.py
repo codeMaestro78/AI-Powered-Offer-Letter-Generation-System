@@ -91,6 +91,15 @@ class OfferLetterApp:
             border: 1px solid #dee2e6;
             margin-bottom: 1rem;
         }
+        /* Disable dimming overlay for Streamlit spinners and loading states */
+        div[data-testid="stSpinner"] {
+            background-color: transparent !important;
+            backdrop-filter: none !important;
+        }
+        div[data-testid="stStatusWidget"] {
+            background-color: transparent !important;
+            backdrop-filter: none !important;
+        }
         </style>
         """, unsafe_allow_html=True)
 
@@ -120,9 +129,9 @@ class OfferLetterApp:
         # Process documents button
         col1, col2 = st.sidebar.columns(2)
         with col1:
-            process_btn = st.button("🔄 Process Documents", type="primary")
+            process_btn = st.button("🔄 Process", type="primary")
         with col2:
-            clear_btn = st.button("🗑️ Clear Data", help="Clear all processed data")
+            clear_btn = st.button("🗑️ Clear", help="Clear all processed data")
         
         if process_btn:
             if uploaded_files and employee_file:
@@ -184,77 +193,77 @@ class OfferLetterApp:
 
     def process_documents(self, uploaded_files: List, employee_file) -> None:
         """Process uploaded documents and employee data"""
-        progress_bar = st.sidebar.progress(0)
-        status_text = st.sidebar.empty()
+        progress_container = st.sidebar.container()
+        progress_bar = progress_container.progress(0)
+        status_text = progress_container.empty()
         
         try:
-            with st.spinner("Processing documents..."):
-                documents = {}
-                total_files = len(uploaded_files)
+            documents = {}
+            total_files = len(uploaded_files)
+            
+            # Process HR documents
+            for i, file in enumerate(uploaded_files):
+                status_text.text(f"Processing {file.name}...")
+                progress_bar.progress((i + 1) / (total_files + 2))
                 
-                # Process HR documents
-                for i, file in enumerate(uploaded_files):
-                    status_text.text(f"Processing {file.name}...")
-                    progress_bar.progress((i + 1) / (total_files + 2))
-                    
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file.name.split('.')[-1]}") as tmp_file:
-                        tmp_file.write(file.getbuffer())
-                        tmp_path = tmp_file.name
-                    
-                    try:
-                        if file.type == "application/pdf":
-                            documents[file.name] = self.doc_processor.process_pdf(tmp_path)
-                        elif file.type == "text/plain":
-                            documents[file.name] = str(file.read(), "utf-8")
-                        elif file.name.endswith('.docx'):
-                            documents[file.name] = self.doc_processor.process_docx(tmp_path)
-                        else:
-                            st.warning(f"Unsupported file type: {file.name}")
-                            continue
-                    finally:
-                        os.unlink(tmp_path)
-                
-                # Process employee data
-                status_text.text("Processing employee data...")
-                progress_bar.progress((total_files + 1) / (total_files + 2))
+                with tempfile.NamedTemporaryFile(delete=False, suffix=f".{file.name.split('.')[-1]}") as tmp_file:
+                    tmp_file.write(file.getbuffer())
+                    tmp_path = tmp_file.name
                 
                 try:
-                    self.employee_df = pd.read_csv(employee_file)
-                    self._validate_employee_data()
-                except Exception as e:
-                    st.error(f"Error reading employee CSV: {str(e)}")
-                    return
-                
-                # Create document chunks
-                status_text.text("Creating document chunks...")
-                chunks = self.doc_processor.intelligent_chunk_documents(documents)
-                
-                if not chunks:
-                    st.error("No valid chunks created from documents")
-                    return
-                
-                # Create embeddings
-                status_text.text("Creating embeddings...")
-                self.vector_store.create_embeddings(chunks)
-                
-                # Initialize offer generator
-                self.offer_generator = OfferGenerator(self.vector_store)
-                
-                # Update session state
-                st.session_state.documents_processed = True
-                st.session_state.employee_data_loaded = True
-                st.session_state.employee_df = self.employee_df
-                st.session_state.document_stats = {
-                    'total_documents': len(documents),
-                    'total_chunks': len(chunks),
-                    'total_employees': len(self.employee_df)
-                }
-                
-                progress_bar.progress(1.0)
-                status_text.text("✅ Processing complete!")
-                
-                st.success(f"✅ Processed {len(chunks)} document chunks and {len(self.employee_df)} employee records")
-                
+                    if file.type == "application/pdf":
+                        documents[file.name] = self.doc_processor.process_pdf(tmp_path)
+                    elif file.type == "text/plain":
+                        documents[file.name] = str(file.read(), "utf-8")
+                    elif file.name.endswith('.docx'):
+                        documents[file.name] = self.doc_processor.process_docx(tmp_path)
+                    else:
+                        st.warning(f"Unsupported file type: {file.name}")
+                        continue
+                finally:
+                    os.unlink(tmp_path)
+            
+            # Process employee data
+            status_text.text("Processing employee data...")
+            progress_bar.progress((total_files + 1) / (total_files + 2))
+            
+            try:
+                self.employee_df = pd.read_csv(employee_file)
+                self._validate_employee_data()
+            except Exception as e:
+                st.error(f"Error reading employee CSV: {str(e)}")
+                return
+            
+            # Create document chunks
+            status_text.text("Creating document chunks...")
+            chunks = self.doc_processor.intelligent_chunk_documents(documents)
+            
+            if not chunks:
+                st.error("No valid chunks created from documents")
+                return
+            
+            # Create embeddings
+            status_text.text("Creating embeddings...")
+            self.vector_store.create_embeddings(chunks)
+            
+            # Initialize offer generator
+            self.offer_generator = OfferGenerator(self.vector_store)
+            
+            # Update session state
+            st.session_state.documents_processed = True
+            st.session_state.employee_data_loaded = True
+            st.session_state.employee_df = self.employee_df
+            st.session_state.document_stats = {
+                'total_documents': len(documents),
+                'total_chunks': len(chunks),
+                'total_employees': len(self.employee_df)
+            }
+            
+            progress_bar.progress(1.0)
+            status_text.text("✅ Processing complete!")
+            
+            st.sidebar.success(f"✅ Processed {len(chunks)} document chunks and {len(self.employee_df)} employee records")
+            
         except Exception as e:
             st.error(f"Error processing documents: {str(e)}")
             st.error("Stack trace:")
@@ -383,16 +392,19 @@ class OfferLetterApp:
             
             # Generate and display assistant response
             with st.chat_message("assistant"):
-                with st.spinner("Thinking..."):
-                    try:
-                        response = self.offer_generator.answer_policy_question(prompt)
-                        st.markdown(response)
-                        # Add assistant response to chat history
-                        st.session_state.chat_history.append({"role": "assistant", "content": response})
-                    except Exception as e:
-                        error_msg = f"Sorry, I encountered an error: {str(e)}"
-                        st.error(error_msg)
-                        st.session_state.chat_history.append({"role": "assistant", "content": error_msg})
+                status_placeholder = st.empty()
+                status_placeholder.info("Processing your question...")
+                try:
+                    response = self.offer_generator.answer_policy_question(prompt)
+                    status_placeholder.empty()
+                    st.markdown(response)
+                    # Add assistant response to chat history
+                    st.session_state.chat_history.append({"role": "assistant", "content": response})
+                except Exception as e:
+                    status_placeholder.empty()
+                    error_msg = f"Sorry, I encountered an error: {str(e)}"
+                    st.error(error_msg)
+                    st.session_state.chat_history.append({"role": "assistant", "content": error_msg})
         
         # Clear chat button
         if st.button("🗑️ Clear Chat History"):
