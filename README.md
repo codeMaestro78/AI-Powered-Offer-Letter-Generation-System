@@ -24,24 +24,27 @@ The system follows a RAG pipeline:
 6.  **Generation**: The retrieved context, along with the employee's details, is fed into a Large Language Model (Gemini 1.5 Pro) which generates a personalized and contextually accurate offer letter.
 
 ## 🏗️ Architecture
-
+<details> <summary>Click to expand diagram</summary>
 ```mermaid
 graph TD
-    subgraph Input Layer
+    subgraph Input_Layer
         A[📄 HR Policies & Templates]
     end
 
-    subgraph Processing Core
-        B(📝 Document Processor) --> C{📚 Vector Store (FAISS)}
-        C --> E(🤖 LLM Interface - Gemini)
+    subgraph Processing_Core
+        B[📝 Document Processor]
+        C[📚 Vector Store (FAISS)]
+        E[🤖 LLM Interface - Gemini]
     end
 
-    subgraph Output Layer
+    subgraph Output_Layer
         D[✨ Embeddings & Metadata]
         F[📧 Generated Offer Letters]
     end
 
     A --> B
+    B --> C
+    C --> E
     C --> D
     E --> F
 
@@ -52,6 +55,7 @@ graph TD
     style D fill:#E8DAEF,stroke:#8E44AD
     style F fill:#D5F5E3,stroke:#2ECC71
 ```
+</details>
 
 ## 🛠️ Technology Stack
 
