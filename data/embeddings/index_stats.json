@@ -1,8 +1,15 @@
 {
-  "total_chunks": 0,
-  "embedding_dimension": 0,
+  "total_chunks": 9,
+  "embedding_dimension": 384,
   "index_type": "IndexFlatIP",
-  "last_updated": null,
-  "creation_time": 0.0,
-  "metadata_keys": []
+  "last_updated": "2025-08-01 14:43:30",
+  "creation_time": 0.3519623279571533,
+  "metadata_keys": [
+    "source",
+    "section",
+    "type",
+    "importance",
+    "chunk_index",
+    "total_chunks"
+  ]
 }

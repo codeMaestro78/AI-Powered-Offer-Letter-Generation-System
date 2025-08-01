@@ -637,13 +637,25 @@ class OfferLetterApp:
                 stats = self.vector_store.get_statistics()
                 col1, col2 = st.columns(2)
                 
+                # Function to format value for st.metric
+                def format_metric_value(val):
+                    if isinstance(val, list):
+                        return ', '.join(map(str, val))
+                    if isinstance(val, (int, float, str, type(None))):
+                        return val
+                    return str(val)
+
+                col1, col2 = st.columns(2)
+                stat_items = list(stats.items())
+                mid_point = (len(stat_items) + 1) // 2
+
                 with col1:
-                    for key, value in list(stats.items())[:len(stats)//2]:
-                        st.metric(key.replace('_', ' ').title(), value)
+                    for key, value in stat_items[:mid_point]:
+                        st.metric(key.replace('_', ' ').title(), format_metric_value(value))
                 
                 with col2:
-                    for key, value in list(stats.items())[len(stats)//2:]:
-                        st.metric(key.replace('_', ' ').title(), value)
+                    for key, value in stat_items[mid_point:]:
+                        st.metric(key.replace('_', ' ').title(), format_metric_value(value))
                         
             except Exception as e:
                 st.error(f"Error retrieving vector store statistics: {str(e)}")

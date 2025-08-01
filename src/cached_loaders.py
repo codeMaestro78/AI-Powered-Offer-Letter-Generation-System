@@ -2,10 +2,13 @@ import streamlit as st
 from sentence_transformers import SentenceTransformer
 import torch
 import logging
+from pathlib import Path
 
 from src.vector_store import VectorStore
+from config.settings import Config
 
 logger = logging.getLogger(__name__)
+
 
 @st.cache_resource
 def load_sentence_transformer(model_name: str = "all-MiniLM-L6-v2") -> SentenceTransformer:

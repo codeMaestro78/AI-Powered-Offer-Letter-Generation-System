@@ -9,3 +9,5 @@ PyPDF2
 python-docx
 torch
 google-generativeai
+diskcache
+types-requests

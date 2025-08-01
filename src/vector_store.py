@@ -47,6 +47,7 @@ from sentence_transformers import SentenceTransformer
 import torch
 
 from config.settings import Config
+from src.utils import get_cache
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -110,6 +111,9 @@ class VectorStore:
         # Create directory structure
         Path(self.config.VECTOR_DB_PATH).mkdir(parents=True, exist_ok=True)
         
+        # Initialize cache
+        self.cache = get_cache()
+
         # Load existing data
         self._load_existing_data()
 
@@ -269,91 +273,61 @@ class VectorStore:
                 self.metadata_index[key][value_str].append(i)
 
     def _create_embeddings_batched(self, texts: List[str], batch_size: int) -> np.ndarray:
-        """Create embeddings in optimized batches with better error handling"""
-        
+        """Create embeddings in optimized batches with caching."""
         if not texts:
             logger.error("❌ No texts provided for embedding creation")
             raise ValueError("Empty texts list")
-        
+
         all_embeddings = []
-        total_batches = (len(texts) + batch_size - 1) // batch_size
-        successful_batches = 0
-        
-        logger.info(f"📦 Processing {total_batches} batches of size {batch_size}")
-        
-        for i in range(0, len(texts), batch_size):
-            batch_texts = texts[i:i + batch_size]
-            batch_num = i // batch_size + 1
-            
-            logger.info(f"🔄 Processing batch {batch_num}/{total_batches} ({len(batch_texts)} texts)")
-            
+        texts_to_encode = []
+        indices_to_encode = []
+
+        # Check cache for existing embeddings
+        for i, text in enumerate(texts):
+            cache_key = hashlib.md5(text.encode()).hexdigest()
+            cached_embedding = self.cache.get(cache_key)
+            if cached_embedding is not None:
+                all_embeddings.append(cached_embedding)
+            else:
+                all_embeddings.append(None)  # Placeholder
+                texts_to_encode.append(text)
+                indices_to_encode.append(i)
+
+        cache_hits = len(texts) - len(texts_to_encode)
+        logger.info(f"Cache hits: {cache_hits}/{len(texts)}")
+
+        if not texts_to_encode:
+            return np.array(all_embeddings).astype(np.float32)
+
+        # Create embeddings for texts not in cache
+        total_batches = (len(texts_to_encode) + batch_size - 1) // batch_size
+        for i in range(0, len(texts_to_encode), batch_size):
+            batch_texts = texts_to_encode[i:i + batch_size]
+            batch_indices = indices_to_encode[i:i + batch_size]
+
             try:
-                # Validate batch texts
-                valid_batch_texts = []
-                for text in batch_texts:
-                    if isinstance(text, str) and text.strip():
-                        valid_batch_texts.append(text)
-                    else:
-                        valid_batch_texts.append("empty")
-                
-                if not valid_batch_texts:
-                    logger.warning(f"⚠️ No valid texts in batch {batch_num}, skipping")
-                    continue
-                
-                # Create embeddings for batch
                 batch_embeddings = self.encoder.encode(
-                    valid_batch_texts,
+                    batch_texts,
                     show_progress_bar=False,
                     convert_to_numpy=True,
-                    normalize_embeddings=False  # We'll normalize later
+                    normalize_embeddings=True
                 )
-                
-                # Validate batch embeddings
-                if batch_embeddings is None or batch_embeddings.size == 0:
-                    logger.error(f"❌ Failed to create embeddings for batch {batch_num}")
-                    continue
-                
-                # Ensure correct shape and type
-                batch_embeddings = np.array(batch_embeddings, dtype=np.float32)
-                if len(batch_embeddings.shape) != 2:
-                    logger.error(f"❌ Invalid embedding shape in batch {batch_num}: {batch_embeddings.shape}")
-                    continue
-                
-                all_embeddings.append(batch_embeddings)
-                successful_batches += 1
-                logger.info(f"✅ Batch {batch_num} completed: shape {batch_embeddings.shape}")
-                
+
+                # Add new embeddings to the main list and cache
+                for j, embedding in enumerate(batch_embeddings):
+                    original_index = batch_indices[j]
+                    all_embeddings[original_index] = embedding
+                    cache_key = hashlib.md5(batch_texts[j].encode()).hexdigest()
+                    self.cache.set(cache_key, embedding)
+
             except Exception as e:
-                logger.error(f"❌ Error processing batch {batch_num}: {str(e)}")
-                # Create zero embeddings for failed batch as fallback
-                try:
-                    zero_embeddings = np.zeros((len(batch_texts), self.embedding_dim), dtype=np.float32)
-                    all_embeddings.append(zero_embeddings)
-                    logger.warning(f"⚠️ Using zero embeddings for failed batch {batch_num}")
-                except Exception as fallback_error:
-                    logger.error(f"❌ Failed to create fallback embeddings: {fallback_error}")
-        
-        # Check if we have any embeddings
-        if not all_embeddings:
-            logger.error("❌ No embeddings were created successfully")
-            raise RuntimeError("Failed to create any embeddings from the provided texts")
-        
-        # Concatenate all embeddings
-        try:
-            embeddings = np.vstack(all_embeddings).astype(np.float32)
-            logger.info(f"📊 Created embeddings shape: {embeddings.shape}")
-            logger.info(f"✅ Successfully processed {successful_batches}/{total_batches} batches")
-            
-            # Validate final embeddings
-            if embeddings.shape[0] != len(texts):
-                logger.warning(f"⚠️ Embedding count mismatch: expected {len(texts)}, got {embeddings.shape[0]}")
-            
-            return embeddings
-            
-        except Exception as e:
-            logger.error(f"❌ Error concatenating embeddings: {str(e)}")
-            logger.error(f"All embeddings shapes: {[emb.shape for emb in all_embeddings]}")
-            raise
+                logger.error(f"Error processing batch: {e}")
+
+        final_embeddings = np.array([emb for emb in all_embeddings if emb is not None])
+        if final_embeddings.size == 0:
+            raise ValueError("Failed to create any embeddings")
+
+        return final_embeddings.astype(np.float32)
 
     def _create_optimized_index(self, embeddings: np.ndarray):
         """Create optimized FAISS index based on data size"""

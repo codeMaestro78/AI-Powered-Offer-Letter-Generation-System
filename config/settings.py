@@ -13,6 +13,7 @@ class Config:
     VECTOR_DB_PATH=os.getenv('VECTOR_DB_PATH','data/embeddings')
     CHUNK_SIZE=int(os.getenv('CHUNK_SIZE','1000'))
     CHUNK_OVERLAP=int(os.getenv("CHUNK_OVERLAP", "200"))
+    CACHE_DIR = os.getenv("CACHE_DIR", "data/cache")
     
     # document processing
 

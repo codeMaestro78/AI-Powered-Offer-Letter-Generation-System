@@ -3,8 +3,18 @@ import pandas as pd
 from typing import List,Dict,Any
 import os
 import logging
+from pathlib import Path
+import diskcache as dc
+from config.settings import Config
 
 logger=logging.getLogger(__name__)
+
+def get_cache() -> dc.Cache:
+    """Initializes and returns a diskcache.Cache object."""
+    cache_dir = Path(Config.CACHE_DIR)
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return dc.Cache(str(cache_dir))
+
 
 class Utils:
     @staticmethod
