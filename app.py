@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any, List
 
 from src.document_processor import DocumentProcessor
-from src.vector_store import VectorStore
+from src.cached_loaders import get_vector_store
 from src.offer_generator import OfferGenerator
 from src.utils import Utils
 from config.settings import Config
@@ -23,7 +23,7 @@ class OfferLetterApp:
     def __init__(self):
         self.config = Config()
         self.doc_processor = DocumentProcessor()
-        self.vector_store = VectorStore()
+        self.vector_store = get_vector_store()
         self.offer_generator = None
         
         # Initialize session state
@@ -182,9 +182,9 @@ class OfferLetterApp:
                 )
             )
         
-        # Clear vector store
-        if hasattr(self, 'vector_store'):
-            self.vector_store = VectorStore()
+        # The vector store is cached, so we just clear its internal state
+        if hasattr(self, 'vector_store') and self.vector_store is not None:
+            self.vector_store.clear()
         
         self.employee_df = pd.DataFrame()
         self.offer_generator = None

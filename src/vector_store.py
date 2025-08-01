@@ -3,10 +3,9 @@ import pickle
 import json
 import hashlib
 import time
-from typing import List, Dict, Any, Optional, Tuple, Union
+from typing import List, Dict, Any, Optional
 from dataclasses import dataclass, field
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from functools import lru_cache
+from concurrent.futures import as_completed
 import threading
 from pathlib import Path
 import logging
@@ -74,15 +73,17 @@ class IndexStats:
 class VectorStore:
     """High-performance vector store with advanced features"""
     
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2", use_gpu: bool = None):
+    def __init__(self, encoder: SentenceTransformer, use_gpu: bool = None):
         self.config = Config()
         
         # GPU detection and setup
         self.device = self._setup_device(use_gpu)
         logger.info(f"🔧 Using device: {self.device}")
         
-        # Model initialization with optimizations
-        self.encoder = self._initialize_encoder(model_name)
+        # Use pre-initialized encoder
+        self.encoder = encoder
+        self.embedding_dim = self.encoder.get_sentence_embedding_dimension()
+        logger.info(f"✅ Encoder provided (dim: {self.embedding_dim})")
         
         # Index management
         self.index = None
@@ -130,32 +131,22 @@ class VectorStore:
         
         return device
 
-    def _initialize_encoder(self, model_name: str) -> SentenceTransformer:
-        """Initialize sentence transformer with optimizations"""
-        try:
-            encoder = SentenceTransformer(model_name, device=self.device)
-            
-            # Optimize for inference
-            if hasattr(encoder, 'eval'):
-                encoder.eval()
-            
-            # Test encoding to warm up
-            test_embedding = encoder.encode(["test"], show_progress_bar=False)
-            self.embedding_dim = test_embedding.shape[1]
-            
-            logger.info(f"✅ Encoder initialized: {model_name} (dim: {self.embedding_dim})")
-            return encoder
-            
-        except Exception as e:
-            logger.error(f"❌ Failed to initialize encoder: {str(e)}")
-            raise
-
     def _load_existing_data(self):
         """Load existing embeddings and metadata"""
         if self.load_embeddings():
             logger.info("📁 Loaded existing vector store data")
         else:
             logger.info("🆕 Starting with empty vector store")
+
+    def clear(self):
+        """Clear the vector store's in-memory data."""
+        with self.index_lock:
+            self.index = None
+            self.chunks = []
+            self.metadata_index = {}
+            self.chunk_hash_map = {}
+            self.stats = IndexStats()
+        logger.info("Vector store cleared.")
 
     def create_embeddings(self, chunks: List[Dict[str, Any]], 
                          batch_size: int = 32, 
