@@ -1,6 +1,10 @@
 # 🤖 AI-Powered Offer Letter Generation System
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ai-powered-offer-letter-generation-system-8vlvdxvrycaxfvpgnjhj.streamlit.app/)
+
 An intelligent system that generates personalized offer letters for candidates based on HR policies, salary bands, and employee data using a Retrieval Augmented Generation (RAG) architecture. The system features an interactive Streamlit interface for easy document management, employee data handling, and offer letter creation.
+
+📌 **Live Demo**: [Access the App](https://ai-powered-offer-letter-generation-system-8vlvdxvrycaxfvpgnjhj.streamlit.app/)
 
 ## ✨ Features
 
