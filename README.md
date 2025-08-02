@@ -120,21 +120,36 @@ graph TB
 
 ```
 offer_letter_system/
-├── app.py                          # Main Streamlit application
-├── requirements.txt                # Python dependencies
-├── .env                            # Environment variables
+├── app.py
 ├── config/
-│   └── settings.py                # Configuration settings
-├── src/
-│   ├── document_processor.py      # Document parsing & chunking
-│   ├── vector_store.py           # FAISS vector database operations
-│   ├── llm_interface.py          # Gemini integration
-│   ├── offer_generator.py        # Offer letter generation logic
-│   └── utils.py                  # Utility functions
+│   └── settings.py
 ├── data/
-│   ├── documents/                # Input HR policy documents
-│   └── employee_data.csv         # Sample employee metadata
-└── README.md
+│   ├── documents/
+│   │   ├── embeddings/
+│   │   │   ├── Employee_List.csv
+│   │   │   └── HR Leave Policy.pdf
+│   │   ├── leave_policy.txt
+│   │   ├── sample_offer_letter.txt
+│   │   └── travel_policy.txt
+│   ├── embeddings/
+│   │   ├── embeddings.pkl
+│   │   ├── faiss_index.bin
+│   │   └── index_stats.json
+│   └── hr_documents/
+├── LICENSE
+├── README.md
+├── requirements.txt
+├── session_data.json
+├── src/
+│   ├── __init__.py
+│   ├── cached_loaders.py
+│   ├── document_processor.py
+│   ├── llm_interface.py
+│   ├── offer_generator.py
+│   ├── utils.py
+│   └── vector_store.py
+└── templates/
+    └── offer_template.py
 ```
 
 ## 🚀 Getting Started
