@@ -198,36 +198,6 @@ class LLMInterface:
         dept_policies = [c for c in chunks if employee_data.get('Department', '').lower() in c.get('source', '').lower() or c.get('section', '').lower()]
         loc_policies = [c for c in chunks if employee_data.get('Location', '').lower() in c.get('source', '').lower() or c.get('section', '').lower()]
         templates = [c for c in chunks if 'template' in c.get('source', '').lower()]
-        general_policies = [c for c in chunks if c not in band_policies and c not in dept_policies and c not in loc_policies and c not in templates]
-
-        # Rank chunks within each category
-        ranked_chunks = []
-        for chunk_group in [templates, band_policies, dept_policies, loc_policies, general_policies]:
-            ranked_chunks.extend(self._rank_context_chunks("", chunk_group, employee_data))
-
-        # Limit context for simple queries
-        if simplified:
-            ranked_chunks = ranked_chunks[:2]
-
-        if ranked_chunks:
-            context_parts.append("### Policy Context")
-            for i, chunk in enumerate(ranked_chunks, 1):
-                source = chunk.get('source', 'Policy Document')
-                section = chunk.get('section', 'General')
-                content = chunk.get('content', '').strip()
-                
-                if simplified:
-                    context_parts.append(f"- From {source}: {content[:200]}...")
-                else:
-                    context_parts.append(f"\n#### Reference {i}")
-                    context_parts.append(f"Source: {source}")
-                    context_parts.append(f"Section: {section}")
-                    context_parts.append(f"Content: {content}")
-                    context_parts.append("-" * 40)
-
-        if not ranked_chunks:
-            context_parts.append("No specific policy context available. Use general company knowledge.")
-
         return "\n".join(context_parts)
 
     def _create_simple_prompt(self, query: str, context_chunks: List[Dict[str, Any]], 

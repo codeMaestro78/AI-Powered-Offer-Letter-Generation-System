@@ -507,8 +507,238 @@ class VectorStore:
             logger.error(f"❌ Error during search: {str(e)}")
             return []
 
-    # ... (rest of the methods remain the same as in your original code)
-    
+    def enhanced_search(self, query: str, k: int = 5, 
+                       score_threshold: float = 0.0,
+                       use_cache: bool = True,
+                       rerank: bool = True,
+                       filter_by_importance: bool = True) -> List[SearchResult]:
+        """Enhanced search with intelligent ranking and filtering"""
+        
+        if self.index is None or len(self.chunks) == 0:
+            logger.warning("⚠️ No index available for search")
+            return []
+        
+        # Input validation
+        if not query or not query.strip():
+            logger.warning("⚠️ Empty query provided")
+            return []
+        
+        # Check cache first
+        if use_cache:
+            cache_key = self._get_enhanced_cache_key(query, k, score_threshold, rerank, filter_by_importance)
+            cached_result = self._get_cached_result(cache_key)
+            if cached_result is not None:
+                logger.info("📦 Using cached enhanced search result")
+                return cached_result
+        
+        try:
+            start_time = time.time()
+            
+            # Create query embedding
+            query_embedding = self.encoder.encode([query.strip()], convert_to_numpy=True)
+            faiss.normalize_L2(query_embedding)
+            
+            # Search with increased k for better filtering and reranking
+            search_k = min(k * 3, self.index.ntotal)
+            scores, indices = self.index.search(query_embedding, search_k)
+            
+            # Process results with enhanced metadata consideration
+            results = self._process_enhanced_search_results(scores[0], indices[0], query, score_threshold)
+            
+            # Apply importance filtering if requested
+            if filter_by_importance:
+                results = self._filter_by_importance(results, query)
+            
+            # Enhanced reranking with context awareness
+            if rerank and len(results) > 1:
+                results = self._enhanced_rerank_results(query, results)
+            
+            # Limit to requested number of results
+            results = results[:k]
+            
+            # Cache results
+            if use_cache:
+                self._cache_result(cache_key, results)
+            
+            search_time = time.time() - start_time
+            logger.info(f"🔍 Enhanced search completed in {search_time:.3f}s, found {len(results)} results")
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"❌ Error during enhanced search: {str(e)}")
+            # Fallback to regular search
+            return self.search(query, k, score_threshold, use_cache, False)
+
+    def _get_enhanced_cache_key(self, query: str, k: int, score_threshold: float, 
+                               rerank: bool, filter_by_importance: bool) -> str:
+        """Generate cache key for enhanced search"""
+        return f"enhanced_{hash(query)}_{k}_{score_threshold}_{rerank}_{filter_by_importance}"
+
+    def _process_enhanced_search_results(self, scores: np.ndarray, indices: np.ndarray, 
+                                       query: str, score_threshold: float) -> List[SearchResult]:
+        """Process search results with enhanced metadata consideration"""
+        results = []
+        query_terms = set(query.lower().split())
+        
+        for score, idx in zip(scores, indices):
+            if idx == -1 or score < score_threshold:
+                continue
+                
+            chunk = self.chunks[idx]
+            metadata = chunk.get('metadata', {})
+            content = chunk.get('content', '')
+            
+            # Calculate enhanced relevance score
+            enhanced_score = self._calculate_enhanced_relevance_score(
+                score, content, metadata, query_terms
+            )
+            
+            result = SearchResult(
+                content=content,
+                metadata=metadata,
+                score=float(enhanced_score),
+                index=int(idx)
+            )
+            results.append(result)
+        
+        # Sort by enhanced score
+        results.sort(key=lambda x: x.score, reverse=True)
+        return results
+
+    def _calculate_enhanced_relevance_score(self, base_score: float, content: str, 
+                                          metadata: Dict[str, Any], query_terms: set) -> float:
+        """Calculate enhanced relevance score using metadata and content analysis"""
+        try:
+            enhanced_score = float(base_score)
+            content_lower = content.lower()
+            
+            # Boost based on importance
+            importance = metadata.get('importance', 'medium')
+            if importance == 'high':
+                enhanced_score *= 1.3
+            elif importance == 'low':
+                enhanced_score *= 0.8
+            
+            # Boost based on document type relevance
+            doc_type = metadata.get('document_type', '')
+            if any(term in doc_type for term in query_terms):
+                enhanced_score *= 1.2
+            
+            # Boost based on key terms match
+            key_terms = metadata.get('key_terms', [])
+            if key_terms:
+                key_terms_lower = [term.lower() for term in key_terms]
+                matches = sum(1 for term in query_terms if any(term in key_term for key_term in key_terms_lower))
+                if matches > 0:
+                    enhanced_score *= (1.0 + 0.1 * matches)
+            
+            # Boost based on section relevance
+            section = metadata.get('section', '').lower()
+            if any(term in section for term in query_terms):
+                enhanced_score *= 1.15
+            
+            # Boost based on exact phrase matches in content
+            query_phrases = [' '.join(query_terms)]
+            for phrase in query_phrases:
+                if phrase in content_lower:
+                    enhanced_score *= 1.25
+            
+            # Consider chunk position (earlier chunks often more important)
+            chunk_position = metadata.get('chunk_position', 0)
+            total_chunks = metadata.get('total_chunks', 1)
+            if total_chunks > 1:
+                position_factor = 1.0 - (chunk_position / total_chunks) * 0.1
+                enhanced_score *= position_factor
+            
+            return enhanced_score
+            
+        except Exception as e:
+            logger.warning(f"Error calculating enhanced relevance score: {str(e)}")
+            return float(base_score)
+
+    def _filter_by_importance(self, results: List[SearchResult], query: str) -> List[SearchResult]:
+        """Filter results by importance, keeping high-importance chunks"""
+        try:
+            # Separate results by importance
+            high_importance = [r for r in results if r.metadata.get('importance') == 'high']
+            medium_importance = [r for r in results if r.metadata.get('importance') == 'medium']
+            low_importance = [r for r in results if r.metadata.get('importance') == 'low']
+            
+            # Prioritize high importance, but don't exclude others entirely
+            filtered_results = []
+            
+            # Always include high importance results
+            filtered_results.extend(high_importance)
+            
+            # Add medium importance results if we need more
+            remaining_slots = max(0, len(results) - len(high_importance))
+            filtered_results.extend(medium_importance[:remaining_slots])
+            
+            # Add low importance only if we still need more and have very few results
+            if len(filtered_results) < 3:
+                remaining_slots = 3 - len(filtered_results)
+                filtered_results.extend(low_importance[:remaining_slots])
+            
+            return filtered_results
+            
+        except Exception as e:
+            logger.warning(f"Error filtering by importance: {str(e)}")
+            return results
+
+    def _enhanced_rerank_results(self, query: str, results: List[SearchResult]) -> List[SearchResult]:
+        """Enhanced reranking with context awareness"""
+        try:
+            query_lower = query.lower()
+            
+            def enhanced_rerank_score(result: SearchResult) -> float:
+                content = result.content.lower()
+                metadata = result.metadata
+                base_score = result.score
+                
+                # Start with the enhanced score
+                rerank_score = base_score
+                
+                # Boost for document summary relevance
+                doc_summary = metadata.get('document_summary', '').lower()
+                if doc_summary and any(word in doc_summary for word in query_lower.split()):
+                    rerank_score *= 1.2
+                
+                # Boost for preceding/following context relevance
+                preceding_context = metadata.get('preceding_context', '').lower()
+                following_context = metadata.get('following_context', '').lower()
+                
+                context_relevance = 0
+                if preceding_context and any(word in preceding_context for word in query_lower.split()):
+                    context_relevance += 0.1
+                if following_context and any(word in following_context for word in query_lower.split()):
+                    context_relevance += 0.1
+                
+                rerank_score *= (1.0 + context_relevance)
+                
+                # Boost for content length (longer chunks often more comprehensive)
+                word_count = metadata.get('word_count', 0)
+                if word_count > 100:
+                    rerank_score *= 1.05
+                elif word_count > 200:
+                    rerank_score *= 1.1
+                
+                # Penalize very short chunks unless they're highly relevant
+                if word_count < 50 and base_score < 0.8:
+                    rerank_score *= 0.9
+                
+                return rerank_score
+            
+            # Rerank results
+            reranked_results = sorted(results, key=enhanced_rerank_score, reverse=True)
+            
+            logger.info(f"🔄 Enhanced reranking completed for {len(results)} results")
+            return reranked_results
+            
+        except Exception as e:
+            logger.warning(f"Error in enhanced reranking: {str(e)}")
+            return results
+
     def _process_search_results(self, scores: np.ndarray, indices: np.ndarray, 
                               score_threshold: float, k: int) -> List[SearchResult]:
         """Process raw search results into SearchResult objects"""

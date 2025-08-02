@@ -11,3 +11,4 @@ torch
 google-generativeai
 diskcache
 types-requests
+reportlab

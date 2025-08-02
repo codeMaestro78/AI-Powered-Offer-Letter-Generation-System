@@ -7,6 +7,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from docx import Document
 import tempfile
 import os
+import time
 from pathlib import Path
 import logging
 
@@ -244,7 +245,7 @@ class DocumentProcessor:
 
     def intelligent_chunk_documents(self, documents: Dict[str, str]) -> List[Dict[str, Any]]:
         """
-        Intelligently chunk documents based on their type and content
+        Intelligently chunk documents based on their type and content with enhanced context preservation
         
         Args:
             documents (Dict[str, str]): Dictionary of document names and content
@@ -252,56 +253,74 @@ class DocumentProcessor:
         Returns:
             List[Dict[str, Any]]: List of document chunks with metadata
         """
-        chunks = []
+        all_chunks = []
         
-        # Progress tracking for Streamlit
-        if 'streamlit' in globals():
-            progress_placeholder = st.empty()
-            total_docs = len(documents)
-        
-        for idx, (doc_name, doc_text) in enumerate(documents.items()):
-            if not doc_text or not doc_text.strip():
-                logger.warning(f"Skipping empty document: {doc_name}")
+        for doc_name, content in documents.items():
+            if not content or not content.strip():
+                logger.warning(f"Empty content for document: {doc_name}")
                 continue
-            
-            # Update progress
-            if 'streamlit' in globals():
-                progress_placeholder.text(f"Chunking document {idx + 1}/{total_docs}: {doc_name}")
-            
-            # Identify document type
-            doc_type = self._identify_document_type(doc_name, doc_text)
-            logger.info(f"Processing {doc_name} as {doc_type}")
-            
-            # Apply appropriate chunking strategy
-            try:
-                if doc_type == "leave_policy":
-                    doc_chunks = self._chunk_leave_policy(doc_text, doc_name)
-                elif doc_type == "travel_policy":
-                    doc_chunks = self._chunk_travel_policy(doc_text, doc_name)
-                elif doc_type == "offer_letter":
-                    doc_chunks = self._chunk_offer_letter(doc_text, doc_name)
-                elif doc_type == "benefits":
-                    doc_chunks = self._chunk_benefits_document(doc_text, doc_name)
-                elif doc_type == "compensation":
-                    doc_chunks = self._chunk_compensation_document(doc_text, doc_name)
-                else:
-                    doc_chunks = self._default_chunking(doc_text, doc_name)
                 
-                chunks.extend(doc_chunks)
-                logger.info(f"Created {len(doc_chunks)} chunks for {doc_name}")
+            try:
+                # Clean the content
+                cleaned_content = self._clean_extracted_text(content)
+                
+                # Identify document type with enhanced detection
+                doc_type = self._identify_document_type(doc_name, cleaned_content)
+                
+                # Extract document summary for better context
+                doc_summary = self._extract_document_summary(cleaned_content, doc_name)
+                
+                # Apply specialized chunking based on document type
+                if doc_type == 'travel_policy':
+                    chunks = self._chunk_travel_policy(cleaned_content, doc_name)
+                elif doc_type == 'leave_policy':
+                    chunks = self._chunk_leave_policy(cleaned_content, doc_name)
+                elif doc_type == 'offer_letter':
+                    chunks = self._chunk_offer_letter(cleaned_content, doc_name)
+                elif doc_type == 'benefits':
+                    chunks = self._chunk_benefits_document(cleaned_content, doc_name)
+                elif doc_type == 'compensation':
+                    chunks = self._chunk_compensation_document(cleaned_content, doc_name)
+                else:
+                    chunks = self._enhanced_default_chunking(cleaned_content, doc_name)
+                
+                # Enhance chunks with better metadata and context
+                enhanced_chunks = self._enhance_chunks_with_context(chunks, doc_summary, doc_type, cleaned_content)
+                
+                # Add document-level metadata to all chunks
+                for chunk in enhanced_chunks:
+                    chunk["metadata"]["document_type"] = doc_type
+                    chunk["metadata"]["document_name"] = doc_name
+                    chunk["metadata"]["document_summary"] = doc_summary
+                    chunk["metadata"]["processing_timestamp"] = time.time()
+                    chunk["metadata"]["word_count"] = len(chunk["content"].split())
+                    chunk["metadata"]["char_count"] = len(chunk["content"])
+                
+                all_chunks.extend(enhanced_chunks)
+                logger.info(f"Successfully chunked {doc_name} into {len(enhanced_chunks)} pieces (type: {doc_type})")
                 
             except Exception as e:
-                logger.error(f"Error chunking document {doc_name}: {str(e)}")
-                # Fall back to default chunking
-                doc_chunks = self._default_chunking(doc_text, doc_name)
-                chunks.extend(doc_chunks)
+                logger.error(f"Error processing document {doc_name}: {str(e)}")
+                # Create a fallback chunk for failed documents
+                fallback_chunk = {
+                    "content": cleaned_content[:2000] + "..." if len(cleaned_content) > 2000 else cleaned_content,
+                    "metadata": {
+                        "source": doc_name,
+                        "section": "Full_Document",
+                        "type": "general",
+                        "document_type": "unknown",
+                        "document_name": doc_name,
+                        "processing_timestamp": time.time(),
+                        "error": f"Processing failed: {str(e)}",
+                        "importance": "low",
+                        "word_count": len(cleaned_content.split()),
+                        "char_count": len(cleaned_content)
+                    }
+                }
+                all_chunks.append(fallback_chunk)
         
-        # Clear progress
-        if 'streamlit' in globals():
-            progress_placeholder.empty()
-        
-        logger.info(f"Total chunks created: {len(chunks)}")
-        return chunks
+        logger.info(f"Total chunks created: {len(all_chunks)}")
+        return all_chunks
 
     def _identify_document_type(self, doc_name: str, doc_text: str) -> str:
         """
@@ -314,16 +333,22 @@ class DocumentProcessor:
         Returns:
             str: Document type identifier
         """
-        doc_name_lower = doc_name.lower()
         doc_text_lower = doc_text.lower()
-        
-        # Check document patterns
+        doc_name_lower = doc_name.lower()
+
+        # Add 'travel' as a standalone keyword for travel policy
+        if 'travel_policy' in self.document_patterns:
+            if 'travel' not in self.document_patterns['travel_policy']:
+                 self.document_patterns['travel_policy'].append('travel')
+
         for doc_type, patterns in self.document_patterns.items():
             for pattern in patterns:
-                if pattern in doc_name_lower or pattern in doc_text_lower:
+                if pattern.lower() in doc_text_lower or pattern.lower() in doc_name_lower:
+                    logger.info(f"Document '{doc_name}' identified as type: {doc_type}")
                     return doc_type
         
-        return "general"
+        logger.info(f"Document '{doc_name}' identified as type: general")
+        return 'general'
 
     def _chunk_leave_policy(self, content: str, doc_name: str) -> List[Dict[str, Any]]:
         """
@@ -422,6 +447,25 @@ class DocumentProcessor:
             List[Dict[str, Any]]: List of chunks with metadata
         """
         chunks = []
+
+        # Extract Travel Eligibility & Entitlements
+        eligibility_patterns = [
+            r"2\.\s*Travel Eligibility & Entitlements \(Band-wise\)(.*?)(?=📅\s*3\.|Booking Process|Reimbursements|\Z)",
+            r"Travel Eligibility.*?Entitlements(.*?)(?=Booking Process|Reimbursements|\Z)"
+        ]
+        for pattern in eligibility_patterns:
+            eligibility = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+            if eligibility:
+                chunks.append({
+                    "content": eligibility.group(0).strip(),
+                    "metadata": {
+                        "source": doc_name,
+                        "section": "Travel Eligibility & Entitlements",
+                        "type": "travel_eligibility",
+                        "importance": "high"
+                    }
+                })
+                break
 
         # Extract Travel Band Matrix
         travel_matrix_patterns = [
@@ -688,6 +732,261 @@ class DocumentProcessor:
                     "error": "Chunking failed, truncated content"
                 }
             })
+        
+        return chunks
+
+    def _extract_document_summary(self, content: str, doc_name: str) -> str:
+        """
+        Extract a brief summary of the document for better context
+        
+        Args:
+            content (str): Document content
+            doc_name (str): Document name
+            
+        Returns:
+            str: Document summary
+        """
+        try:
+            # Extract first few sentences as summary
+            sentences = re.split(r'[.!?]+', content[:1000])
+            summary_sentences = [s.strip() for s in sentences[:3] if s.strip() and len(s.strip()) > 10]
+            
+            if summary_sentences:
+                summary = '. '.join(summary_sentences) + '.'
+            else:
+                # Fallback to first paragraph
+                paragraphs = content.split('\n\n')
+                summary = paragraphs[0][:200] + '...' if len(paragraphs[0]) > 200 else paragraphs[0]
+            
+            return summary.strip()
+        except Exception as e:
+            logger.warning(f"Could not extract summary for {doc_name}: {str(e)}")
+            return f"Document: {doc_name}"
+
+    def _enhance_chunks_with_context(self, chunks: List[Dict[str, Any]], doc_summary: str, 
+                                   doc_type: str, full_content: str) -> List[Dict[str, Any]]:
+        """
+        Enhance chunks with additional context and improved metadata
+        
+        Args:
+            chunks (List[Dict[str, Any]]): Original chunks
+            doc_summary (str): Document summary
+            doc_type (str): Document type
+            full_content (str): Full document content
+            
+        Returns:
+            List[Dict[str, Any]]: Enhanced chunks
+        """
+        enhanced_chunks = []
+        
+        for i, chunk in enumerate(chunks):
+            enhanced_chunk = chunk.copy()
+            
+            # Add contextual information
+            enhanced_chunk["metadata"]["chunk_position"] = i
+            enhanced_chunk["metadata"]["total_chunks"] = len(chunks)
+            enhanced_chunk["metadata"]["document_summary"] = doc_summary
+            
+            # Add surrounding context for better retrieval
+            content = chunk["content"]
+            
+            # Find position in full document
+            content_start = full_content.find(content[:100]) if len(content) > 100 else full_content.find(content)
+            
+            if content_start != -1:
+                # Add preceding context (up to 200 chars)
+                preceding_start = max(0, content_start - 200)
+                preceding_context = full_content[preceding_start:content_start].strip()
+                
+                # Add following context (up to 200 chars)
+                content_end = content_start + len(content)
+                following_end = min(len(full_content), content_end + 200)
+                following_context = full_content[content_end:following_end].strip()
+                
+                if preceding_context:
+                    enhanced_chunk["metadata"]["preceding_context"] = preceding_context
+                if following_context:
+                    enhanced_chunk["metadata"]["following_context"] = following_context
+            
+            # Extract key terms for better searchability
+            key_terms = self._extract_key_terms(content)
+            enhanced_chunk["metadata"]["key_terms"] = key_terms
+            
+            # Determine chunk importance based on content
+            importance = self._calculate_chunk_importance(content, doc_type)
+            enhanced_chunk["metadata"]["importance"] = importance
+            
+            enhanced_chunks.append(enhanced_chunk)
+        
+        return enhanced_chunks
+
+    def _extract_key_terms(self, content: str) -> List[str]:
+        """
+        Extract key terms from content for better searchability
+        
+        Args:
+            content (str): Chunk content
+            
+        Returns:
+            List[str]: Key terms
+        """
+        try:
+            # Extract important terms (capitalized words, numbers with units, etc.)
+            key_terms = []
+            
+            # Capitalized words (likely important terms)
+            capitalized = re.findall(r'\b[A-Z][a-z]+\b', content)
+            key_terms.extend(capitalized[:10])  # Limit to top 10
+            
+            # Numbers with units (salary, days, percentages)
+            numbers_with_units = re.findall(r'\b\d+[%₹$,\s]*(?:days?|months?|years?|INR|USD|percent|%)\b', content, re.IGNORECASE)
+            key_terms.extend(numbers_with_units[:5])
+            
+            # Policy-specific terms
+            policy_terms = re.findall(r'\b(?:policy|procedure|guideline|requirement|benefit|entitlement|allowance)\b', content, re.IGNORECASE)
+            key_terms.extend(policy_terms[:5])
+            
+            return list(set(key_terms))  # Remove duplicates
+        except Exception as e:
+            logger.warning(f"Could not extract key terms: {str(e)}")
+            return []
+
+    def _calculate_chunk_importance(self, content: str, doc_type: str) -> str:
+        """
+        Calculate the importance of a chunk based on its content and document type
+        
+        Args:
+            content (str): Chunk content
+            doc_type (str): Document type
+            
+        Returns:
+            str: Importance level (high, medium, low)
+        """
+        try:
+            content_lower = content.lower()
+            importance_score = 0
+            
+            # High importance indicators
+            high_importance_terms = [
+                'salary', 'compensation', 'ctc', 'benefits', 'policy', 'requirement',
+                'mandatory', 'must', 'shall', 'entitled', 'eligible', 'band', 'grade',
+                'allowance', 'reimbursement', 'approval', 'process', 'procedure'
+            ]
+            
+            for term in high_importance_terms:
+                if term in content_lower:
+                    importance_score += 2
+            
+            # Medium importance indicators
+            medium_importance_terms = [
+                'guideline', 'recommendation', 'should', 'may', 'can', 'option',
+                'additional', 'supplementary', 'example', 'note'
+            ]
+            
+            for term in medium_importance_terms:
+                if term in content_lower:
+                    importance_score += 1
+            
+            # Document type specific scoring
+            if doc_type in ['travel_policy', 'leave_policy', 'compensation']:
+                importance_score += 1
+            
+            # Length-based scoring (longer chunks often more important)
+            if len(content) > 500:
+                importance_score += 1
+            
+            # Determine final importance
+            if importance_score >= 4:
+                return 'high'
+            elif importance_score >= 2:
+                return 'medium'
+            else:
+                return 'low'
+                
+        except Exception as e:
+            logger.warning(f"Could not calculate chunk importance: {str(e)}")
+            return 'medium'
+
+    def _enhanced_default_chunking(self, content: str, doc_name: str) -> List[Dict[str, Any]]:
+        """
+        Enhanced default chunking strategy with better context preservation
+        
+        Args:
+            content (str): Document content
+            doc_name (str): Document name
+            
+        Returns:
+            List[Dict[str, Any]]: List of chunks with metadata
+        """
+        chunks = []
+        
+        try:
+            # Use semantic-aware splitting
+            # First try to split by sections (headers, numbered items)
+            section_patterns = [
+                r'\n\s*(?:\d+\.\s+|[A-Z][^\n]*:)\s*\n',  # Numbered sections or headers
+                r'\n\s*[A-Z][A-Z\s]{10,}\n',  # All caps headers
+                r'\n\s*[-=]{3,}\s*\n',  # Separator lines
+            ]
+            
+            sections = [content]  # Start with full content
+            
+            for pattern in section_patterns:
+                new_sections = []
+                for section in sections:
+                    parts = re.split(pattern, section)
+                    new_sections.extend([part.strip() for part in parts if part.strip()])
+                sections = new_sections
+            
+            # If sections are too large, use text splitter
+            final_chunks = []
+            for section in sections:
+                if len(section) > self.config.CHUNK_SIZE * 1.5:
+                    # Use text splitter for large sections
+                    text_chunks = self.text_splitter.split_text(section)
+                    final_chunks.extend(text_chunks)
+                else:
+                    final_chunks.append(section)
+            
+            # Create chunk objects with enhanced metadata
+            for i, chunk_content in enumerate(final_chunks):
+                if chunk_content.strip():  # Only add non-empty chunks
+                    # Try to identify section header
+                    lines = chunk_content.strip().split('\n')
+                    section_name = lines[0][:50] + '...' if len(lines[0]) > 50 else lines[0]
+                    
+                    chunks.append({
+                        "content": chunk_content.strip(),
+                        "metadata": {
+                            "source": doc_name,
+                            "section": section_name,
+                            "type": "general",
+                            "chunk_index": i,
+                            "total_chunks": len(final_chunks),
+                            "importance": "medium",
+                            "processing_method": "enhanced_default"
+                        }
+                    })
+                    
+        except Exception as e:
+            logger.error(f"Error in enhanced default chunking for {doc_name}: {str(e)}")
+            # Fallback to simple chunking
+            text_chunks = self.text_splitter.split_text(content)
+            for i, chunk in enumerate(text_chunks):
+                if chunk.strip():
+                    chunks.append({
+                        "content": chunk.strip(),
+                        "metadata": {
+                            "source": doc_name,
+                            "section": f"Section_{i+1}",
+                            "type": "general",
+                            "chunk_index": i,
+                            "total_chunks": len(text_chunks),
+                            "importance": "medium",
+                            "processing_method": "fallback",
+                            "error": "Enhanced chunking failed"
+                        }
+                    })
         
         return chunks
 
